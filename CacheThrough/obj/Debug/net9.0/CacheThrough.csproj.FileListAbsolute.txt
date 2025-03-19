@@ -1,0 +1,12 @@
+D:\Alachisoft work\NCacheServerSide\CacheThrough\bin\Debug\net9.0\CacheThrough.deps.json
+D:\Alachisoft work\NCacheServerSide\CacheThrough\bin\Debug\net9.0\CacheThrough.dll
+D:\Alachisoft work\NCacheServerSide\CacheThrough\bin\Debug\net9.0\CacheThrough.pdb
+D:\Alachisoft work\NCacheServerSide\CacheThrough\obj\Debug\net9.0\CacheThrough.csproj.AssemblyReference.cache
+D:\Alachisoft work\NCacheServerSide\CacheThrough\obj\Debug\net9.0\CacheThrough.GeneratedMSBuildEditorConfig.editorconfig
+D:\Alachisoft work\NCacheServerSide\CacheThrough\obj\Debug\net9.0\CacheThrough.AssemblyInfoInputs.cache
+D:\Alachisoft work\NCacheServerSide\CacheThrough\obj\Debug\net9.0\CacheThrough.AssemblyInfo.cs
+D:\Alachisoft work\NCacheServerSide\CacheThrough\obj\Debug\net9.0\CacheThrough.csproj.CoreCompileInputs.cache
+D:\Alachisoft work\NCacheServerSide\CacheThrough\obj\Debug\net9.0\CacheThrough.dll
+D:\Alachisoft work\NCacheServerSide\CacheThrough\obj\Debug\net9.0\refint\CacheThrough.dll
+D:\Alachisoft work\NCacheServerSide\CacheThrough\obj\Debug\net9.0\CacheThrough.pdb
+D:\Alachisoft work\NCacheServerSide\CacheThrough\obj\Debug\net9.0\ref\CacheThrough.dll
