@@ -10,152 +10,160 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using log4net;
+using log4net.Config;
 
 public class ReadThrough : IReadThruProvider
 {
-    private SqlConnection _connection;
-    private string connectionstringDB;
-    private ICache cache;
-    public void Dispose()
+
+    private static readonly ILog log = LogManager.GetLogger(typeof(ReadThrough));
+    private ICache _cache;
+    private string _connectionString;
+    private string _logFilePath;
+    private string _logLevel;
+
+    private string _VERSION;
+
+    public ReadThrough()
     {
-        if (_connection != null)
-        {
-            _connection.Close();
-        }
+        log.Info($"{_VERSION} ReadThrough: Constructor invoke");
     }
-    public void Init(IDictionary parameters, string cacheId)
+
+    public void Init(IDictionary parameters, string cacheName)
     {
-        //cache = CacheManager.GetCache(cacheId);
-        //string connString = "Server=KUMAIL-RAZA\\SQLEXPRESS;Database=testdata;User Id=sa;Password=4Islamabad;Encrypt=False;";
-        //connectionstringDB = connString;
-        //if (connString != "")
-        //    _connection = new SqlConnection(connString);
-        //try
-        //{
-        //    _connection.Open();
-        //}
-        //catch (Exception ex)
-        //{
-        //    throw new Exception("Cannot connect Error: " + ex);
-        //    //handle exception
-        //}
+        try
+        {
+            _VERSION = Configuration.GetFileVersion();
+            log.Info($"{_VERSION} ReadThrough: Init, called with {parameters.Count} parameters");
+            _connectionString = parameters.Contains("ConnectionString") ? parameters["ConnectionString"] as string : null;
+            _logFilePath = parameters.Contains("LogFilePath") ? parameters["LogFilePath"] as string : null;
+            _logLevel = parameters.Contains("LogLevel") ? parameters["LogLevel"] as string : "Debug";
+            // Setting the log file path of logger
+            if (_logFilePath != null)
+            {
+                Configuration.ConfigureLogging(_logFilePath, logLevel: _logLevel);
+                log.Info($"{_VERSION} _logFilePath: {_logFilePath}, _logLevel: {_logLevel}");
+                // Get the configured log level from the logger
+                if (log.IsDebugEnabled)
+                {
+                    log.Debug($"{_VERSION} Debug log level enabled");
+                }
+                if (log.IsInfoEnabled)
+                {
+                    log.Info($"{_VERSION} Info log level enabled");
+                }
+            }
+            else
+            {
+                log.Info($"{_VERSION} _logFilePath not found");
+            }
+
+            if (_connectionString != null)
+            {
+                log.Info($"{_VERSION} _connectionString: {_connectionString}");
+            }
+            else
+            {
+                log.Info($"{_VERSION} _connectionString not found");
+            }
+            _cache = CacheManager.GetCache(cacheName);
+            log.Info($"{_VERSION} Initialized Cache: {cacheName}");
+        }
+        catch (System.Exception exp)
+        {
+            log.Error($"{_VERSION} Error initializing SubscriberLoader: {exp.Message}");
+        }
     }
     public ProviderDataTypeItem<IEnumerable> LoadDataTypeFromSource(string key, DistributedDataType dataType)
     {
-        IEnumerable value = null;
-        ProviderDataTypeItem<IEnumerable> dataTypeItem = null;
-        switch (dataType)
+        try
         {
-            case DistributedDataType.List:
-                value = new List<object>()
+            log.Info($"LoadDataTypeFromSource called with key: {key}");
+            IEnumerable value = null;
+            ProviderDataTypeItem<IEnumerable> dataTypeItem = null;
+            switch (dataType)
+            {
+                case DistributedDataType.List:
+                    value = new List<object>()
                 {
                     LoadFromDataSource(key)
                 };
-                dataTypeItem = new ProviderDataTypeItem<IEnumerable>(value);
-                break;
-            case DistributedDataType.Dictionary:
-                value = new Dictionary<string, object>()
+                    dataTypeItem = new ProviderDataTypeItem<IEnumerable>(value);
+                    break;
+                case DistributedDataType.Dictionary:
+                    value = new Dictionary<string, object>()
                     {
                     { key ,  LoadFromDataSource(key) }
                     };
-                dataTypeItem = new ProviderDataTypeItem<IEnumerable>(value);
-                break;
-            case DistributedDataType.Counter:
-                dataTypeItem = new ProviderDataTypeItem<IEnumerable>(1000);
-                break;
-            default:
-                var data = LoadFromSource(key);
-                cache.Add(key, data);
-                break;
+                    dataTypeItem = new ProviderDataTypeItem<IEnumerable>(value);
+                    break;
+                case DistributedDataType.Counter:
+                    dataTypeItem = new ProviderDataTypeItem<IEnumerable>(1000);
+                    break;
+                default:
+                    var data = LoadFromSource(key);
+                    _cache.Add(key, data);
+                    break;
+            }
+            return dataTypeItem;
         }
-        return dataTypeItem;
+        catch (Exception exp)
+        {
+            log.Error($"Error fetching data from data source: {exp.Message}");
+            return null;
+        }
     }
     public ProviderCacheItem LoadFromSource(string key)
     {
-        // LoadFromDataSource loads data from data source
-        object value = LoadFromDataSource(key);
-        var cacheItem = new ProviderCacheItem(value);
-        return cacheItem;
+        try
+        {
+            log.Info($"LoadFromSource called with key: {key}");
+
+            // LoadFromDataSource loads data from data source
+            object value = LoadFromDataSource(key);
+            var cacheItem = new ProviderCacheItem(value);
+            return cacheItem;
+        }
+        catch (Exception exp)
+        {
+            log.Error($"Error fetching data from data source: {exp.Message}");
+            return null;
+        }
     }
     public IDictionary<string, ProviderCacheItem> LoadFromSource(ICollection<string> keys)
     {
+        log.Info($"LoadFromSource called with {keys.Count} keys");
         var dictionary = new Dictionary<string, ProviderCacheItem>();
         try
         {
-            var objects = FetchRandomProducts();
-            foreach (Product key in objects)
+            foreach (var key in keys)
             {
-                // LoadFromDataSource loads data from data source
-                dictionary.Add(key.ProductName, new ProviderCacheItem(key));
+                var value = LoadFromDataSource(key);
+                dictionary.Add(key, new ProviderCacheItem(value));
             }
+            log.Info($"{_VERSION} LoadFromSource: Fetched {dictionary.Count} items from data source");
             return dictionary;
         }
         catch (Exception exp)
         {
-            // Handle exception
+            log.Error($"Error fetching data from data source: {exp.Message}");
         }
         return dictionary;
     }
+
+    /// <summary>
+    /// Simulates loading key from data source
+    /// </summary>
+    /// <param name="key"></param>
+    /// <returns></returns>
     private object LoadFromDataSource(string key)
     {
-        // Define the SQL query to fetch product data
-        string query = "SELECT ProductName, UnitPrice, QuantityPerUnit, RowVersionColumn FROM Product WHERE ProductName = @key";
-        Product product = new Product();
-        product.ProductName = key;
-        product.UnitPrice = "123";
-        product.QuantityPerUnit = "789";
-        // Create SQL connection and command
-        //using (_connection)
-        //{
-        //    using (SqlCommand command = new SqlCommand(query, _connection))
-        //    {
-        //        command.Parameters.AddWithValue("@key", key);
-        //        // Execute the query and fetch data
-        //        using (SqlDataReader reader = command.ExecuteReader())
-        //        {
-        //            while (reader.Read())
-        //            {
-        //                // Create Product object and populate it with data
-        //                product = new Product
-        //                {
-        //                    ProductName = reader.GetString(0),      // ProductName
-        //                    UnitPrice = reader.GetString(1), // UnitPrice (converted to string)
-        //                    QuantityPerUnit = reader.GetString(2)   // QuantityPerUnit
-        //                };
-        //                //// Add the product to the list
-        //                //products.Add(product);
-        //            }
-        //        }
-        //    }
-        //}
-        return product;
+        var value = "FetchedFromDataSource_" + key;
+        log.Info($"Value fetched from datasource: {value}");
+        return value;
     }
-    private IList<object> FetchRandomProducts()
+    public void Dispose()
     {
-        // List to hold fetched products
-        var products = new List<object>();
-        // Create a Random object to generate random data
-        Random random = new Random();
-        // Define an array of sample product names for random selection
-        string[] sampleProductNames = new string[]
-        {
-        "Product A", "Product B", "Product C", "Product D", "Product E",
-        "Product F", "Product G", "Product H", "Product I", "Product J",
-        "Product K", "Product L", "Product M", "Product N", "Product O",
-        "Product P", "Product Q", "Product R", "Product S", "Product T"
-        };
-        // Generate 20 random products
-        for (int i = 0; i < 20; i++)
-        {
-            var product = new Product
-            {
-                ProductName = sampleProductNames[random.Next(sampleProductNames.Length)], // Randomly select a product name
-                UnitPrice = random.Next(1, 1000).ToString(), // Random UnitPrice between 1 and 1000
-                QuantityPerUnit = random.Next(1, 100).ToString() // Random QuantityPerUnit between 1 and 100
-            };
-            // Add the random product to the list
-            products.Add(product);
-        }
-        return products;
+        log.Info($"{_VERSION} ReadThrough: Dispose invoke");
     }
 }

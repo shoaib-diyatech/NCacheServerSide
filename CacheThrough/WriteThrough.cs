@@ -1,6 +1,6 @@
 namespace ServerSide.CacheThrough;
 
-using Alachisoft.NCache.Caching;
+using Alachisoft.NCache.Client;
 using Alachisoft.NCache.Runtime.Caching;
 using Alachisoft.NCache.Runtime.DatasourceProviders;
 using System;
@@ -12,31 +12,34 @@ using log4net.Config;
 
 public class WriteThrough : IWriteThruProvider
 {
-
     private static readonly ILog log = LogManager.GetLogger(typeof(WriteThrough));
+
+    private ICache _cache;
+    private string _connectionString;
+    private string _logFilePath;
+
+    private string _logLevel;
 
     private string _VERSION;
 
     public WriteThrough()
     {
-        log.Info("WriteThrough Constructor");
-        log4net.Config.XmlConfigurator.Configure();
+        log.Info($"{_VERSION} WriteThrough: Constructor invoke");
     }
+
     public void Init(IDictionary parameters, string cacheName)
     {
         try
         {
-            _VERSION = GetFileVersion();
-            log.Info($"{_VERSION} WriteThrough Init, called with {parameters.Count} parameters");
-            _connectionString = parameters.ContainsKey("ConnectionString") ? parameters["ConnectionString"] : null;
-            _logFilePath = parameters.ContainsKey("LogFilePath") ? parameters["LogFilePath"] : null;
-            _logLevel = parameters.ContainsKey("LogLevel") ? parameters["LogLevel"] : "Debug";
-            _maxRecordsToLoad = parameters.ContainsKey("MaxRecordsToLoad") ? int.Parse(parameters["MaxRecordsToLoad"]) : 1000;
-            _recordsToLoadEveryTime = parameters.ContainsKey("RecordsToLoadEveryTime") ? int.Parse(parameters["RecordsToLoadEveryTime"]) : 100;
+            _VERSION = Configuration.GetFileVersion();
+            log.Info($"{_VERSION} WriteThrough: Init, called with {parameters.Count} parameters");
+            _connectionString = parameters.Contains("ConnectionString") ? parameters["ConnectionString"] as string : null;
+            _logFilePath = parameters.Contains("LogFilePath") ? parameters["LogFilePath"] as string : null;
+            _logLevel = parameters.Contains("LogLevel") ? parameters["LogLevel"] as string : "Debug";
             // Setting the log file path of logger
             if (_logFilePath != null)
             {
-                ConfigureLogging(_logFilePath, logLevel: _logLevel);
+                Configuration.ConfigureLogging(_logFilePath, logLevel: _logLevel);
                 log.Info($"{_VERSION} _logFilePath: {_logFilePath}, _logLevel: {_logLevel}");
                 // Get the configured log level from the logger
                 if (log.IsDebugEnabled)
@@ -72,7 +75,7 @@ public class WriteThrough : IWriteThruProvider
     public OperationResult WriteToDataSource(WriteOperation operation)
     {
         ProviderCacheItem cacheItem = operation.ProviderItem;
-        Product product = cacheItem.GetValue<Product>();
+        object product = cacheItem.GetValue<object>();
         switch (operation.OperationType)
         {
             case WriteOperationType.Add:
@@ -111,7 +114,6 @@ public class WriteThrough : IWriteThruProvider
                     log.Error($"{_VERSION} WriteOperationType.Update: Error writing to data source: {ex.Message}");
                     return new OperationResult(operation, OperationResult.Status.Failure, ex.Message);
                 }
-
                 break;
         }
         return new OperationResult(operation, OperationResult.Status.Success);
@@ -122,7 +124,7 @@ public class WriteThrough : IWriteThruProvider
         foreach (WriteOperation operation in operations)
         {
             ProviderCacheItem cacheItem = operation.ProviderItem;
-            Product product = cacheItem.GetValue<Product>();
+            object item = cacheItem.GetValue<object>();
             switch (operation.OperationType)
             {
                 case WriteOperationType.Add:
@@ -176,27 +178,27 @@ public class WriteThrough : IWriteThruProvider
         var operationResult = new List<OperationResult>();
         foreach (DataTypeWriteOperation operation in dataTypeWriteOperations)
         {
-            var list = new List<Product>();
+            var list = new List<object>();
             ProviderDataTypeItem<object> cacheItem = operation.ProviderItem;
-            Product product = (Product)cacheItem.Data;
+            object data = (object)cacheItem.Data;
             switch (operation.OperationType)
             {
                 case DatastructureOperationType.CreateDataType:
                     // Insert logic for creating a new List
-                    IList myList = new List<Product>();
-                    myList.Add(product.ProductName);
+                    IList myList = new List<object>();
+                    myList.Add(data);
                     break;
                 case DatastructureOperationType.AddToDataType:
                     // Insert logic for any Add operation
-                    list.Add(product);
+                    list.Add(data);
                     break;
                 case DatastructureOperationType.DeleteFromDataType:
                     // Insert logic for any Remove operation
-                    list.Remove(product);
+                    list.Remove(data);
                     break;
                 case DatastructureOperationType.UpdateDataType:
                     // Insert logic for any Update operation
-                    list.Insert(0, product);
+                    list.Insert(0, data);
                     break;
             }
             // Write Thru operation status can be set according to the result.

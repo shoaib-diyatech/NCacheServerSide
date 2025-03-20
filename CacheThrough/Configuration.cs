@@ -1,16 +1,24 @@
 namespace ServerSide.CacheThrough;
 
+using System.Reflection;
+using log4net;
+using log4net.Appender;
+using log4net.Layout;
+using log4net.Repository;
+using log4net.Config;
+using System;
+
 public class Configuration
 {
 
-    private string GetFileVersion()
+    public static string GetFileVersion()
     {
         var assembly = Assembly.GetExecutingAssembly();
         var fileVersionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location);
         return fileVersionInfo.FileVersion;
     }
 
-    private void ConfigureLogging(string logFilePath, string logLevel = "Debug")
+    public static void ConfigureLogging(string logFilePath, string logLevel = "Debug")
     {
         var layout = new PatternLayout
         {
