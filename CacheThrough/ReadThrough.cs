@@ -29,7 +29,7 @@ public class ReadThrough : IReadThruProvider
         log.Info($"{_VERSION} ReadThrough: Constructor invoke");
     }
 
-    public void Init(IDictionary parameters, string cacheName)
+    public void Init(IDictionary parameters, string cacheId)
     {
         try
         {
@@ -66,12 +66,12 @@ public class ReadThrough : IReadThruProvider
             {
                 log.Info($"{_VERSION} _connectionString not found");
             }
-            _cache = CacheManager.GetCache(cacheName);
-            log.Info($"{_VERSION} Initialized Cache: {cacheName}");
+            _cache = CacheManager.GetCache(cacheId);
+            log.Info($"{_VERSION} Initialized Cache: {cacheId}");
         }
         catch (System.Exception exp)
         {
-            log.Error($"{_VERSION} Error initializing SubscriberLoader: {exp.Message}");
+            log.Error($"{_VERSION} Error initializing ReadThrough: {exp.Message}");
         }
     }
     public ProviderDataTypeItem<IEnumerable> LoadDataTypeFromSource(string key, DistributedDataType dataType)

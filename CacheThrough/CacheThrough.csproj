@@ -4,10 +4,21 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyVersion>1.0.0.1</AssemblyVersion>
+    <FileVersion>1.0.1</FileVersion>
+    <InformationalVersion>1.0.1-beta</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Alachisoft.NCache.SDK" Version="5.3.4" />
+    <PackageReference Include="Costura.Fody" Version="6.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Fody" Version="6.9.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="log4net" Version="3.0.4" />
   </ItemGroup>
 

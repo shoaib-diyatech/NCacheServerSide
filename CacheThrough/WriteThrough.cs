@@ -27,7 +27,7 @@ public class WriteThrough : IWriteThruProvider
         log.Info($"{_VERSION} WriteThrough: Constructor invoke");
     }
 
-    public void Init(IDictionary parameters, string cacheName)
+    public void Init(IDictionary parameters, string cacheId)
     {
         try
         {
@@ -64,12 +64,12 @@ public class WriteThrough : IWriteThruProvider
             {
                 log.Info($"{_VERSION} _connectionString not found");
             }
-            _cache = CacheManager.GetCache(cacheName);
-            log.Info($"{_VERSION} Initialized Cache: {cacheName}");
+            _cache = CacheManager.GetCache(cacheId);
+            log.Info($"{_VERSION} Initialized Cache: {cacheId}");
         }
         catch (System.Exception exp)
         {
-            log.Error($"{_VERSION} Error initializing SubscriberLoader: {exp.Message}");
+            log.Error($"{_VERSION} Error initializing WriteThrough: {exp.Message}");
         }
     }
     public OperationResult WriteToDataSource(WriteOperation operation)
