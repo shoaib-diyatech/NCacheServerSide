@@ -4,7 +4,6 @@ using Microsoft.Data.SqlClient;
 using log4net;
 using NCacheClient;
 
-
 public class DataLayer
 {
     private string _connectionString;
@@ -17,7 +16,8 @@ public class DataLayer
     {
         log = ilog;
         _connectionString = connectionString;
-        log.Debug($" DataLayer: Constructor invoked");
+        IsConnected = false;
+        log.Debug($" DataLayer: Constructor invoked, IsConnected: {IsConnected} Instance: {this.GetHashCode()}");
     }
 
     public bool IsConnected { get; private set; }
@@ -26,16 +26,13 @@ public class DataLayer
     {
         try
         {
-            log.Debug($" DataLayer: Connect, called with connection string: {_connectionString}");
+            log.Debug($" DataLayer: Connect, called with connection string: {_connectionString} Instance: {this.GetHashCode()}");
             if (!string.IsNullOrEmpty(_connectionString))
             {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    _connection = connection;
-                    _connection.Open();
-                    IsConnected = true;
-                    log.Info($" DataLayer: Connected to database");
-                }
+                _connection = new SqlConnection(_connectionString);
+                _connection.Open();
+                IsConnected = true;
+                log.Debug($" DataLayer: Connected to database, IsConnected: {IsConnected}");
             }
             else
             {
@@ -44,22 +41,30 @@ public class DataLayer
         }
         catch (Exception ex)
         {
-            log.Error($" DataLayer: Connect failed with exception: {ex.Message}");
+            log.Error($" DataLayer: Connect failed with exception: {ex.Message}", ex);
         }
     }
 
     public Subscriber LoadSubscriber(string msisdn)
     {
-        log.Debug($" DataLayer: LoadSubscriber, called with msisdn: {msisdn}");
+        log.Debug($"DataLayer: LoadSubscriber, called with msisdn(key): {msisdn} Instance: {this.GetHashCode()}");
         Subscriber subscriber = null;
-
         try
         {
-            if (IsConnected)
+            log.Debug(" DataLayer: LoadSubscriber, called");
+            log.Debug($"DataLayer: LoadSubscriber: IsConnected: {IsConnected}, _connection: {_connection}");
+
+            if (IsConnected && _connection != null && _connection.State == System.Data.ConnectionState.Open)
             {
-                string query = "SELECT * FROM Subscribers WHERE MSISDN = @msisdn";
+                string query = "SELECT * FROM MyStatus.dbo.Subscriber WHERE MSISDN = @msisdn";
+                log.Debug($" DataLayer: LoadSubscriber, query: {query}");
                 using (var command = new SqlCommand(query, _connection))
                 {
+                    if (command.Parameters == null)
+                    {
+                        log.Error($" DataLayer: SqlCommand.Parameters is null");
+                        return null;
+                    }
                     command.Parameters.AddWithValue("@msisdn", msisdn);
                     using (var reader = command.ExecuteReader())
                     {
@@ -75,6 +80,16 @@ public class DataLayer
                         }
                         if (reader.Read())
                         {
+                            // Dynamically log all columns and their values
+                            var values = new List<string>();
+                            for (int i = 0; i < reader.FieldCount; i++)
+                            {
+                                string columnName = reader.GetName(i);
+                                object value = reader.GetValue(i);
+                                values.Add($"{columnName}: {value}");
+                            }
+                            log.Debug($"DataLayer: reader: {string.Join(", ", values)}");
+
                             subscriber = new Subscriber
                             {
                                 Msisdn = reader["MSISDN"].ToString(),
@@ -90,12 +105,12 @@ public class DataLayer
             }
             else
             {
-                log.Error($" DataLayer: Not connected to database");
+                log.Error($" DataLayer: Not connected to database or connection is not open. IsConnected: {IsConnected}, _connection: {_connection}, State: {_connection?.State}");
             }
         }
         catch (Exception ex)
         {
-            log.Error($" DataLayer: LoadSubscriber failed with exception: {ex.Message}");
+            log.Error($" DataLayer: LoadSubscriber failed with exception: {ex.Message}", ex);
         }
         return subscriber;
     }

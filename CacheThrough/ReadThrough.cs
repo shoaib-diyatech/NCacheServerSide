@@ -23,7 +23,7 @@ public class ReadThrough : IReadThruProvider
 
     public ReadThrough()
     {
-        log.Info($"{_VERSION} ReadThrough: Constructor invoke");
+        log.Info($"{_VERSION} ReadThrough: Constructor invoke, Instance: {this.GetHashCode()}");
     }
 
     public void Init(IDictionary parameters, string cacheId)
@@ -31,7 +31,7 @@ public class ReadThrough : IReadThruProvider
         try
         {
             _VERSION = Configuration.GetFileVersion();
-            log.Info($"{_VERSION} ReadThrough: Init, called with {parameters.Count} parameters");
+            log.Info($"{_VERSION} ReadThrough: Init, called with {parameters.Count} parameters, Instance: {this.GetHashCode()}");
             _connectionString = parameters.Contains("ConnectionString") ? parameters["ConnectionString"] as string : null;
             _logFilePath = parameters.Contains("LogFilePath") ? parameters["LogFilePath"] as string : null;
             _logLevel = parameters.Contains("LogLevel") ? parameters["LogLevel"] as string : "Debug";
@@ -63,7 +63,7 @@ public class ReadThrough : IReadThruProvider
             {
                 log.Info($"{_VERSION} _connectionString not found");
             }
-
+            log.Debug($"{_VERSION} ReadThrough: Init, called with {parameters.Count} parameters, Instance: {this.GetHashCode()}");
             try
             {
                 // initializing sql connection
@@ -145,7 +145,7 @@ public class ReadThrough : IReadThruProvider
     {
         try
         {
-            log.Info($"LoadFromSource called with key: {key}");
+            log.Info($"ReadThrough: LoadFromSource called with key: {key} Instance: {this.GetHashCode()}");
 
             ProviderCacheItem cacheItem = new ProviderCacheItem(LoadFromDataSource(key));
             cacheItem.ResyncOptions.ResyncOnExpiration = true;
@@ -187,6 +187,12 @@ public class ReadThrough : IReadThruProvider
     /// <returns></returns>
     private object LoadFromDataSource(string key)
     {
+        log.Debug($"ReadThrough: LoadFromDataSource called with key: {key} Instance: {this.GetHashCode()}");
+        if (dataLayer == null)
+        {
+            log.Error($"DataLayer is null. Make sure Init() was called before using ReadThrough. Instance: {this.GetHashCode()}");
+            return null;
+        }
         var value = dataLayer.LoadSubscriber(key);
         if (value == null)
         {
