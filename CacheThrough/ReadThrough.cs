@@ -69,8 +69,8 @@ public class ReadThrough : IReadThruProvider
             }
 
             // initializing sql connection
-            dataLayer = new DataLayer();
-            dataLayer.Connect(_connectionString);
+            dataLayer = new DataLayer(log, _connectionString);
+            dataLayer.Connect();
             if (dataLayer.IsConnected)
             {
                 log.Info($"{_VERSION} DataLayer connected");

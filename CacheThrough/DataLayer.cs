@@ -2,6 +2,8 @@ namespace ServerSide.CacheThrough;
 
 using Microsoft.Data.SqlClient;
 using log4net;
+using NCacheClient;
+
 
 public class DataLayer
 {
@@ -9,14 +11,13 @@ public class DataLayer
 
     private SqlConnection _connection;
 
-    private static readonly ILog log;
+    private static ILog log;
 
-    public DataLayer(ILog log, string connectionString)
+    public DataLayer(ILog ilog, string connectionString)
     {
-        log = log;
+        log = ilog;
         _connectionString = connectionString;
-        _VERSION = Configuration.GetFileVersion();
-        log.Debug($"{_VERSION} DataLayer: Constructor invoked");
+        log.Debug($" DataLayer: Constructor invoked");
     }
 
     public bool IsConnected { get; private set; }
@@ -25,7 +26,7 @@ public class DataLayer
     {
         try
         {
-            log.Debug($"{_VERSION} DataLayer: Connect, called with connection string: {_connectionString}");
+            log.Debug($" DataLayer: Connect, called with connection string: {_connectionString}");
             if (!string.IsNullOrEmpty(_connectionString))
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -33,23 +34,23 @@ public class DataLayer
                     _connection = connection;
                     _connection.Open();
                     IsConnected = true;
-                    log.Info($"{_VERSION} DataLayer: Connected to database");
+                    log.Info($" DataLayer: Connected to database");
                 }
             }
             else
             {
-                log.Error($"{_VERSION} DataLayer: Connection string is null or empty");
+                log.Error($" DataLayer: Connection string is null or empty");
             }
         }
         catch (Exception ex)
         {
-            log.Error($"{_VERSION} DataLayer: Connect failed with exception: {ex.Message}");
+            log.Error($" DataLayer: Connect failed with exception: {ex.Message}");
         }
     }
 
     public Subscriber LoadSubscriber(string msisdn)
     {
-        log.Debug($"{_VERSION} DataLayer: LoadSubscriber, called with msisdn: {msisdn}");
+        log.Debug($" DataLayer: LoadSubscriber, called with msisdn: {msisdn}");
         Subscriber subscriber = null;
 
         try
@@ -57,26 +58,26 @@ public class DataLayer
             if (IsConnected)
             {
                 string query = "SELECT * FROM Subscribers WHERE MSISDN = @msisdn";
-                using (var command = new SqlCommand(query, connection))
+                using (var command = new SqlCommand(query, _connection))
                 {
                     command.Parameters.AddWithValue("@msisdn", msisdn);
                     using (var reader = command.ExecuteReader())
                     {
                         if (reader == null)
                         {
-                            log.Error($"{_VERSION} DataLayer: LoadSubscriber failed, reader is null");
+                            log.Error($" DataLayer: LoadSubscriber failed, reader is null");
                             return null;
                         }
                         if (reader.HasRows == false)
                         {
-                            log.Error($"{_VERSION} DataLayer: LoadSubscriber failed, no rows found");
+                            log.Error($" DataLayer: LoadSubscriber failed, no rows found");
                             return null;
                         }
                         if (reader.Read())
                         {
                             subscriber = new Subscriber
                             {
-                                MSISDN = reader["MSISDN"].ToString(),
+                                Msisdn = reader["MSISDN"].ToString(),
                                 Name = reader["Name"].ToString(),
                                 Email = reader["Email"].ToString(),
                                 IsActive = Convert.ToBoolean(reader["IsActive"]),
@@ -89,35 +90,35 @@ public class DataLayer
             }
             else
             {
-                log.Error($"{_VERSION} DataLayer: Not connected to database");
+                log.Error($" DataLayer: Not connected to database");
             }
         }
         catch (Exception ex)
         {
-            log.Error($"{_VERSION} DataLayer: LoadSubscriber failed with exception: {ex.Message}");
+            log.Error($" DataLayer: LoadSubscriber failed with exception: {ex.Message}");
         }
         return subscriber;
     }
 
     public void Disconnect()
     {
-        log.Debug($"{_VERSION} DataLayer: Disconnect, called");
+        log.Debug($" DataLayer: Disconnect, called");
         if (_connection != null)
         {
             _connection.Close();
             _connection.Dispose();
             IsConnected = false;
-            log.Info($"{_VERSION} DataLayer: Disconnected from database");
+            log.Info($" DataLayer: Disconnected from database");
         }
         else
         {
-            log.Error($"{_VERSION} DataLayer: Connection is null");
+            log.Error($" DataLayer: Connection is null");
         }
     }
 
     public void Dispose()
     {
-        log.Debug($"{_VERSION} DataLayer: Dispose, called");
+        log.Debug($" DataLayer: Dispose, called");
         Disconnect();
     }
 }
