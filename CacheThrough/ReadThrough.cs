@@ -15,7 +15,6 @@ using log4net.Config;
 
 public class ReadThrough : IReadThruProvider
 {
-
     private static readonly ILog log = LogManager.GetLogger(typeof(ReadThrough));
     private ICache _cache;
     private string _connectionString;
@@ -23,6 +22,8 @@ public class ReadThrough : IReadThruProvider
     private string _logLevel;
 
     private string _VERSION;
+
+    private DataLayer dataLayer;
 
     public ReadThrough()
     {
@@ -66,14 +67,31 @@ public class ReadThrough : IReadThruProvider
             {
                 log.Info($"{_VERSION} _connectionString not found");
             }
-            _cache = CacheManager.GetCache(cacheId);
-            log.Info($"{_VERSION} Initialized Cache: {cacheId}");
+
+            // initializing sql connection
+            dataLayer = new DataLayer();
+            dataLayer.Connect(_connectionString);
+            if (dataLayer.IsConnected)
+            {
+                log.Info($"{_VERSION} DataLayer connected");
+            }
+            else
+            {
+                log.Error($"{_VERSION} DataLayer not connected");
+            }
         }
         catch (System.Exception exp)
         {
             log.Error($"{_VERSION} Error initializing ReadThrough: {exp.Message}");
         }
     }
+
+    /// <summary>
+    /// Responsible for loading data structures from the external data source. 
+    /// </summary>
+    /// <param name="key">key to fetch from data source</param>
+    /// <param name="dataType">type of data structure received</param>
+    /// <returns>Data structure contained in ProviderCacheItem which can be enumerated</returns>
     public ProviderDataTypeItem<IEnumerable> LoadDataTypeFromSource(string key, DistributedDataType dataType)
     {
         try
@@ -113,15 +131,21 @@ public class ReadThrough : IReadThruProvider
             return null;
         }
     }
+
+    /// <summary>
+    /// Responsible for loading an object from the external data source. 
+    /// Key is passed as parameter.
+    /// <param name="key">item identifier; probably a primary key</param>
+    /// <returns>data contained in ProviderCacheItem</returns>
     public ProviderCacheItem LoadFromSource(string key)
     {
         try
         {
             log.Info($"LoadFromSource called with key: {key}");
 
-            // LoadFromDataSource loads data from data source
-            object value = LoadFromDataSource(key);
-            var cacheItem = new ProviderCacheItem(value);
+            ProviderCacheItem cacheItem = new ProviderCacheItem(LoadFromDataSource(key));
+            cacheItem.ResyncOptions.ResyncOnExpiration = true;
+            // Resync provider name will be picked from default provider.
             return cacheItem;
         }
         catch (Exception exp)
@@ -130,6 +154,7 @@ public class ReadThrough : IReadThruProvider
             return null;
         }
     }
+
     public IDictionary<string, ProviderCacheItem> LoadFromSource(ICollection<string> keys)
     {
         log.Info($"LoadFromSource called with {keys.Count} keys");
@@ -158,12 +183,22 @@ public class ReadThrough : IReadThruProvider
     /// <returns></returns>
     private object LoadFromDataSource(string key)
     {
-        var value = "FetchedFromDataSource_" + key;
+        var value = dataLayer.LoadSubscriber(key);
+        if (value == null)
+        {
+            log.Error($"Value not found in data source for key: {key}");
+            return null;
+        }
         log.Info($"Value fetched from datasource: {value}");
         return value;
     }
+
+    /// <summary>
+    ///  Perform tasks associated with freeing, releasing, or resetting resources.
+    /// </summary>
     public void Dispose()
     {
-        log.Info($"{_VERSION} ReadThrough: Dispose invoke");
+        dataLayer.Dispose();
+        log.Info($"{_VERSION} ReadThrough: Dispose, called");
     }
 }
