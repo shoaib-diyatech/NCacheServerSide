@@ -3,6 +3,7 @@
     <Costura>
         <IncludeAssemblies>
             log4net
+            Microsoft.Data.SqlClient
         </IncludeAssemblies>
     </Costura>
 </Weavers>

@@ -6,12 +6,8 @@ using Alachisoft.NCache.Runtime.DatasourceProviders;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using log4net;
-using log4net.Config;
+
 
 public class ReadThrough : IReadThruProvider
 {
@@ -68,9 +64,17 @@ public class ReadThrough : IReadThruProvider
                 log.Info($"{_VERSION} _connectionString not found");
             }
 
-            // initializing sql connection
-            dataLayer = new DataLayer(log, _connectionString);
-            dataLayer.Connect();
+            try
+            {
+                // initializing sql connection
+                dataLayer = new DataLayer(log, _connectionString);
+                dataLayer.Connect();
+            }
+            catch (Exception exp)
+            {
+                log.Error($"{_VERSION} Error initializing DataLayer: {exp.Message}", exp);
+                throw;
+            }
             if (dataLayer.IsConnected)
             {
                 log.Info($"{_VERSION} DataLayer connected");

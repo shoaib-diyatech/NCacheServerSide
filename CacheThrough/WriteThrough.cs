@@ -6,9 +6,8 @@ using Alachisoft.NCache.Runtime.DatasourceProviders;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using log4net;
-using log4net.Config;
+
 
 public class WriteThrough : IWriteThruProvider
 {
